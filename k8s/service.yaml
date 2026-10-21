@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clinic-svc
+  namespace: clinic
+  labels:
+    app: clinic-app
+spec:
+  selector:
+    app: clinic-app
+  ports:
+  # The port name "http" is used by the Prometheus scrape path in monitoring/prometheus.yml
+  - name: http
+    port: 5000
+    targetPort: 5000

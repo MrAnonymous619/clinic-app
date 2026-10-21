@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Appointments</title>
+<style>
+:root{--bg:#f4f6fa;--card:#ffffff;--text:#1d2733;--muted:#66758a;--line:#dfe5ee;--brand:#2563eb;--brand-text:#ffffff;--ok:#16a34a;--bad:#dc2626}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1520;--card:#18212f;--text:#e6ecf5;--muted:#93a1b5;--line:#2a3547;--brand:#60a5fa;--brand-text:#0b1220}}
+:root[data-theme="dark"]{--bg:#0f1520;--card:#18212f;--text:#e6ecf5;--muted:#93a1b5;--line:#2a3547;--brand:#60a5fa;--brand-text:#0b1220}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:900px;margin:0 auto;padding:20px 14px 40px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin-bottom:16px}
+h1{font-size:1.35rem;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-size:.78rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:6px}
+.dot.up{background:var(--ok)}.dot.down{background:var(--bad)}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 12px}
+button.primary{background:var(--brand);color:var(--brand-text);border-color:var(--brand);font-weight:600}
+button:disabled{opacity:.6;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--brand);outline-offset:1px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font-size:1.5rem}.stat span{color:var(--muted);font-size:.8rem}
+.grid{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+h2{font-size:1rem;margin:0 0 10px}
+label{display:block;font-size:.8rem;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;font:inherit;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+input.invalid,select.invalid{border-color:var(--bad)}
+.err{color:var(--bad);font-size:.75rem;min-height:1em;margin-top:3px}
+.toolbar{display:flex;gap:8px;margin-bottom:10px}
+ul{list-style:none;margin:0;padding:0}
+li.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+li.row:first-child{border-top:0}
+.time{font-weight:700;color:var(--brand);min-width:56px}
+.who{flex:1}.who small{display:block;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:22px 0}
+.cancel{color:var(--bad);border-color:var(--bad);padding:5px 10px;font-size:.8rem}
+#toasts{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;z-index:10}
+.toast{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ok);padding:10px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.toast.bad{border-left-color:var(--bad)}
+footer{margin-top:16px;color:var(--muted);font-size:.78rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Clinic Appointments</h1>
+    <div class="chips">
+      <span class="chip" id="health"><span class="dot" id="dot"></span><span id="healthText">Checking...</span></span>
+      <span class="chip" id="ver">Version: -</span>
+      <span class="chip" id="pod">Pod: -</span>
+      <button id="theme" type="button" aria-label="Toggle dark mode">Dark / Light</button>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Summary">
+    <div class="card stat"><b id="sTotal">0</b><span>Appointments</span></div>
+    <div class="card stat"><b id="sDocs">0</b><span>Doctors booked</span></div>
+    <div class="card stat"><b id="sLat">-</b><span>Last response</span></div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Book an appointment</h2>
+      <form id="form" novalidate>
+        <label for="patient">Patient name</label>
+        <input id="patient" autocomplete="off" placeholder="e.g. Ravi Kumar">
+        <div class="err" id="ePatient"></div>
+        <label for="doctor">Doctor</label>
+        <select id="doctor"><option value="">Choose a doctor</option></select>
+        <div class="err" id="eDoctor"></div>
+        <label for="time">Time</label>
+        <input id="time" type="time">
+        <div class="err" id="eTime"></div>
+        <button class="primary" id="submit" type="submit">Book appointment</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Appointments</h2>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search patient..." aria-label="Search patient">
+        <select id="filter" aria-label="Filter by doctor"><option value="">All doctors</option></select>
+      </div>
+      <ul id="list"></ul>
+      <div class="empty" id="empty" hidden>No appointments yet. Book the first one.</div>
+    </section>
+  </div>
+
+  <footer>Data is stored in this pod's memory (no database), so it is lost on restart and each pod has its own list.</footer>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const DOCTORS = ["Dr Rao", "Dr Sharma", "Dr Fatima", "Dr Kumar"];
+let appts = [];
+
+function toast(msg, bad) {
+  const t = document.createElement("div");
+  t.className = "toast" + (bad ? " bad" : "");
+  t.textContent = msg;
+  $("toasts").appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+async function api(path, opts) {
+  const start = performance.now();
+  const res = await fetch(path, Object.assign({cache: "no-store"}, opts));
+  $("sLat").textContent = Math.round(performance.now() - start) + " ms";
+  return res;
+}
+
+function fillDoctors() {
+  for (const sel of [$("doctor"), $("filter")]) {
+    for (const d of DOCTORS) {
+      const o = document.createElement("option");
+      o.value = d; o.textContent = d;
+      sel.appendChild(o);
+    }
+  }
+}
+
+function render() {
+  const q = $("search").value.trim().toLowerCase();
+  const f = $("filter").value;
+  const shown = appts
+    .filter((a) => (!q || a.patient.toLowerCase().includes(q)) && (!f || a.doctor === f))
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const list = $("list");
+  list.innerHTML = "";
+  for (const a of shown) {
+    const li = document.createElement("li");
+    li.className = "row";
+    const time = document.createElement("span");
+    time.className = "time"; time.textContent = a.time;
+    const who = document.createElement("span");
+    who.className = "who"; who.textContent = a.patient;
+    const small = document.createElement("small");
+    small.textContent = a.doctor + " | #" + a.id;
+    who.appendChild(small);
+    const btn = document.createElement("button");
+    btn.className = "cancel"; btn.type = "button"; btn.textContent = "Cancel";
+    btn.onclick = () => cancel(a.id);
+    li.append(time, who, btn);
+    list.appendChild(li);
+  }
+  $("empty").hidden = shown.length > 0;
+  $("empty").textContent = appts.length ? "No appointments match your search." : "No appointments yet. Book the first one.";
+  $("sTotal").textContent = appts.length;
+  $("sDocs").textContent = new Set(appts.map((a) => a.doctor)).size;
+}
+
+async function load() {
+  try {
+    const res = await api("/appointments");
+    appts = await res.json();
+    render();
+  } catch (e) {
+    toast("Could not load appointments", true);
+  }
+}
+
+function setErr(field, errId, msg) {
+  $(field).classList.toggle("invalid", !!msg);
+  $(errId).textContent = msg;
+  return !msg;
+}
+
+function validate() {
+  const a = setErr("patient", "ePatient", $("patient").value.trim().length < 2 ? "Enter the patient name (2+ letters)" : "");
+  const b = setErr("doctor", "eDoctor", $("doctor").value ? "" : "Choose a doctor");
+  const c = setErr("time", "eTime", $("time").value ? "" : "Pick a time");
+  return a && b && c;
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!validate()) return;
+  $("submit").disabled = true;
+  try {
+    const res = await api("/appointments", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({patient: $("patient").value.trim(), doctor: $("doctor").value, time: $("time").value})
+    });
+    if (!res.ok) throw new Error("bad response");
+    toast("Appointment booked");
+    $("form").reset();
+    await load();
+  } catch (err) {
+    toast("Booking failed, please try again", true);
+  } finally {
+    $("submit").disabled = false;
+  }
+});
+
+async function cancel(id) {
+  if (!confirm("Cancel appointment #" + id + "?")) return;
+  try {
+    const res = await api("/appointments/" + id, {method: "DELETE"});
+    if (!res.ok) throw new Error("bad response");
+    toast("Appointment cancelled");
+    await load();
+  } catch (err) {
+    toast("Could not cancel (it may be on another pod)", true);
+    load();
+  }
+}
+
+async function pollStatus() {
+  try {
+    const res = await fetch("/version", {cache: "no-store"});
+    if (!res.ok) throw new Error("down");
+    const v = await res.json();
+    $("ver").textContent = "Version: " + v.version;
+    $("pod").textContent = "Pod: " + v.pod;
+    $("dot").className = "dot up";
+    $("healthText").textContent = "Healthy";
+  } catch (e) {
+    $("dot").className = "dot down";
+    $("healthText").textContent = "Unreachable";
+  }
+}
+
+$("search").addEventListener("input", render);
+$("filter").addEventListener("change", render);
+for (const id of ["patient", "doctor", "time"]) {
+  $(id).addEventListener("input", () => $(id).classList.remove("invalid"));
+}
+
+$("theme").addEventListener("click", () => {
+  const dark = getComputedStyle(document.body).backgroundColor !== "rgb(244, 246, 250)";
+  const next = dark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("theme", next); } catch (e) {}
+});
+try {
+  const saved = localStorage.getItem("theme");
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+} catch (e) {}
+
+fillDoctors();
+load();
+pollStatus();
+setInterval(pollStatus, 5000);
+</script>
+</body>
+</html>
