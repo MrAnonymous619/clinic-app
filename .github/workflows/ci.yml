@@ -27,15 +27,11 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/clinic-app:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/clinic-app:${{ github.sha }}
 
-      - name: Notify WhatsApp (only if everything above succeeded)
+      - name: Notify Slack (only if everything above succeeded)
         if: success()
         env:
-          SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-          TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          SLACK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          curl -s -X POST \
-            "https://api.twilio.com/2010-04-01/Accounts/$SID/Messages.json" \
-            --data-urlencode "From=whatsapp:${{ secrets.TWILIO_WHATSAPP_FROM }}" \
-            --data-urlencode "To=whatsapp:${{ secrets.TWILIO_WHATSAPP_TO }}" \
-            --data-urlencode "Body=Pipeline succeeded. Image pushed to Docker Hub (commit ${{ github.sha }})." \
-            -u "$SID:$TOKEN"
+          curl -s --fail-with-body -X POST -H "Content-type: application/json" \
+            --data '{"text":"Pipeline succeeded for ${{ github.repository }}. Image pushed to Docker Hub (commit ${{ github.sha }})."}' \
+            "$SLACK_URL"
