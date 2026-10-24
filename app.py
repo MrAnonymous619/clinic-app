@@ -20,7 +20,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_
 app = Flask(__name__)
 
 # Change this text (v1 -> v2) for the "fresh code push" in the live demo.
-VERSION = "v1"
+VERSION = "v2"
 POD = socket.gethostname()  # inside Kubernetes this is the pod name
 appointments = []
 id_counter = itertools.count(1)
